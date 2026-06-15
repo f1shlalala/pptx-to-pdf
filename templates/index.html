@@ -7,6 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         :root {
             --paper:    #f3ede2;
@@ -15,13 +16,13 @@
             --ink:      #2f2a24;
             --ink-soft: #786e62;
             --line:     #d8ccb6;
-            --line-2:   #cbbda2;
             --clay:     #a9573b;
             --clay-dk:  #8f462e;
             --sage:     #6f7a52;
             --sage-dk:  #5e6845;
             --gold:     #c08a3e;
             --ok:       #5f6f43;
+            --err:      #9a4632;
         }
 
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -37,68 +38,37 @@
             padding: 36px 28px;
             position: relative;
             background-color: var(--paper);
-            /* warm earthy glow + subtle grain, no gradients-as-decoration */
             background-image:
                 radial-gradient(120% 90% at 50% -10%, rgba(192,138,62,0.10), transparent 55%),
                 radial-gradient(80% 70% at 100% 100%, rgba(111,122,82,0.08), transparent 60%);
             -webkit-font-smoothing: antialiased;
         }
-        /* fine paper grain */
         body::before {
             content: "";
             position: fixed; inset: 0; z-index: 0; pointer-events: none;
             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
         }
 
-        /* corner fish — personal mark */
         .fish {
-            position: fixed;
-            top: 26px; right: 30px;
-            width: 78px; height: auto;
-            color: var(--clay);
-            opacity: 0.55;
-            z-index: 1;
+            position: fixed; top: 26px; right: 30px;
+            width: 78px; height: auto; color: var(--clay);
+            opacity: 0.55; z-index: 1;
         }
         .fish .bubble { opacity: 0.7; }
         @media (max-width: 520px) { .fish { width: 60px; top: 18px; right: 18px; } }
 
-        .wrap {
-            position: relative;
-            z-index: 2;
-            width: 100%;
-            max-width: 480px;
-        }
+        .wrap { position: relative; z-index: 2; width: 100%; max-width: 480px; }
 
-        /* wordmark */
-        .wordmark {
-            display: flex; align-items: center; gap: 10px;
-            margin-bottom: 34px;
-        }
+        .wordmark { display: flex; align-items: center; gap: 10px; margin-bottom: 34px; }
         .wordmark .wm-fish { width: 26px; height: 26px; color: var(--clay); }
-        .wordmark .wm-text {
-            font-family: 'Fraunces', Georgia, serif;
-            font-size: 1.05rem; font-weight: 600; letter-spacing: -0.01em;
-        }
+        .wordmark .wm-text { font-family: 'Fraunces', Georgia, serif; font-size: 1.05rem; font-weight: 600; letter-spacing: -0.01em; }
         .wordmark .wm-text span { color: var(--clay); }
 
-        /* hero */
-        .eyebrow {
-            font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase;
-            color: var(--clay); font-weight: 600; margin-bottom: 14px;
-        }
-        h1 {
-            font-family: 'Fraunces', Georgia, serif;
-            font-size: 2.85rem; font-weight: 600; line-height: 1.02;
-            letter-spacing: -0.015em;
-        }
+        .eyebrow { font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--clay); font-weight: 600; margin-bottom: 14px; }
+        h1 { font-family: 'Fraunces', Georgia, serif; font-size: 2.85rem; font-weight: 600; line-height: 1.02; letter-spacing: -0.015em; }
         h1 em { font-style: italic; font-weight: 500; color: var(--clay); }
-        .lede {
-            margin-top: 16px; margin-bottom: 30px;
-            font-size: 0.97rem; line-height: 1.65; color: var(--ink-soft);
-            max-width: 38ch;
-        }
+        .lede { margin-top: 16px; margin-bottom: 30px; font-size: 0.97rem; line-height: 1.65; color: var(--ink-soft); max-width: 38ch; }
 
-        /* main panel — gives structure & "pop" */
         .panel {
             background: rgba(255,253,248,0.5);
             border: 1px solid var(--line);
@@ -107,14 +77,10 @@
             box-shadow: 0 1px 0 rgba(255,255,255,0.6) inset;
         }
 
-        /* drop zone */
         .drop-zone {
-            border: 1.5px dashed var(--line);
-            border-radius: 10px;
-            background: var(--paper-2);
-            padding: 36px 24px;
-            text-align: center;
-            cursor: pointer;
+            border: 1.5px dashed var(--line); border-radius: 10px;
+            background: var(--paper-2); padding: 36px 24px;
+            text-align: center; cursor: pointer;
             transition: border-color 0.2s, background 0.2s;
         }
         .drop-zone:hover { border-color: var(--clay); background: var(--paper-3); }
@@ -124,15 +90,10 @@
         .drop-zone .dz-title { font-size: 0.96rem; font-weight: 500; }
         .drop-zone .dz-sub { font-size: 0.8rem; color: var(--ink-soft); margin-top: 5px; }
 
-        /* well-designed browse button */
         .browse {
-            margin-top: 16px;
-            display: inline-flex; align-items: center; gap: 8px;
-            padding: 9px 18px;
-            border: 1px solid var(--clay);
-            border-radius: 999px;
-            background: transparent;
-            color: var(--clay);
+            margin-top: 16px; display: inline-flex; align-items: center; gap: 8px;
+            padding: 9px 18px; border: 1px solid var(--clay); border-radius: 999px;
+            background: transparent; color: var(--clay);
             font-family: inherit; font-size: 0.83rem; font-weight: 600;
             cursor: pointer; transition: background 0.2s, color 0.2s;
         }
@@ -141,36 +102,51 @@
 
         #fileInput { display: none; }
 
-        /* file row */
+        /* queue */
+        .queue { display: none; margin-top: 12px; }
+        .queue-head {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 2px 6px 10px; font-size: 0.78rem; color: var(--ink-soft); font-weight: 500;
+        }
+        .queue-head .clear {
+            border: none; background: none; cursor: pointer; color: var(--ink-soft);
+            font: inherit; font-size: 0.76rem; font-weight: 600; text-decoration: underline;
+            text-underline-offset: 2px; transition: color 0.2s;
+        }
+        .queue-head .clear:hover { color: var(--clay); }
+
+        .file-list { display: flex; flex-direction: column; gap: 8px; }
         .file-row {
-            display: none; align-items: center; gap: 14px;
-            margin-top: 12px; padding: 14px 16px;
-            border: 1px solid var(--line); border-radius: 10px;
+            display: flex; align-items: center; gap: 12px;
+            padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px;
             background: var(--paper-2);
         }
         .file-row .fr-badge {
-            width: 34px; height: 34px; border-radius: 8px; flex-shrink: 0;
+            width: 32px; height: 32px; border-radius: 8px; flex-shrink: 0;
             display: grid; place-items: center;
             background: rgba(169,87,59,0.12); color: var(--clay);
         }
-        .file-row .fr-badge svg { width: 17px; height: 17px; }
+        .file-row .fr-badge svg { width: 16px; height: 16px; }
         .file-row .fr-meta { flex: 1; min-width: 0; }
-        .file-row .fr-name {
-            font-size: 0.88rem; font-weight: 500;
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        .file-row .fr-name { font-size: 0.86rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .file-row .fr-status { font-size: 0.74rem; color: var(--ink-soft); margin-top: 1px; display: flex; align-items: center; gap: 6px; }
+        .file-row .fr-status.done { color: var(--ok); }
+        .file-row .fr-status.error { color: var(--err); }
+        .file-row .mini-spin {
+            width: 11px; height: 11px; border: 2px solid rgba(120,110,98,0.3);
+            border-top-color: var(--clay); border-radius: 50%; animation: spin 0.7s linear infinite;
         }
-        .file-row .fr-size { font-size: 0.76rem; color: var(--ink-soft); margin-top: 1px; }
-        .file-row .fr-remove {
+        .file-row .fr-act {
             border: none; background: none; cursor: pointer; color: var(--ink-soft);
-            padding: 4px; line-height: 0; border-radius: 6px; transition: color 0.2s;
+            padding: 5px; line-height: 0; border-radius: 6px; transition: color 0.2s, background 0.2s;
         }
-        .file-row .fr-remove:hover { color: var(--clay); }
-        .file-row .fr-remove svg { width: 16px; height: 16px; }
+        .file-row .fr-act:hover { color: var(--clay); background: rgba(169,87,59,0.08); }
+        .file-row .fr-act.dl:hover { color: var(--sage); background: rgba(111,122,82,0.10); }
+        .file-row .fr-act svg { width: 16px; height: 16px; }
+        .file-row .fr-act[hidden] { display: none; }
 
-        /* primary button */
         .btn {
-            display: none; width: 100%;
-            margin-top: 12px; padding: 15px;
+            display: none; width: 100%; margin-top: 12px; padding: 15px;
             border: none; border-radius: 10px;
             font-family: inherit; font-size: 0.92rem; font-weight: 600; letter-spacing: 0.01em;
             color: var(--paper); background: var(--clay);
@@ -181,68 +157,51 @@
         .btn:disabled { opacity: 0.6; cursor: progress; }
         .btn .inner { display: inline-flex; align-items: center; justify-content: center; gap: 10px; }
         .spinner {
-            width: 15px; height: 15px;
-            border: 2px solid rgba(243,237,226,0.4); border-top-color: var(--paper);
-            border-radius: 50%; animation: spin 0.7s linear infinite; display: none;
+            width: 15px; height: 15px; border: 2px solid rgba(243,237,226,0.4);
+            border-top-color: var(--paper); border-radius: 50%;
+            animation: spin 0.7s linear infinite; display: none;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        .progress {
-            display: none; margin-top: 12px; height: 2px;
-            background: var(--line); overflow: hidden; border-radius: 2px;
-        }
-        .progress span {
-            display: block; height: 100%; width: 35%; background: var(--clay);
-            animation: indet 1.3s ease-in-out infinite;
-        }
-        @keyframes indet { 0% { transform: translateX(-120%); } 100% { transform: translateX(380%); } }
+        .progress { display: none; margin-top: 12px; height: 3px; background: var(--line); overflow: hidden; border-radius: 3px; }
+        .progress .bar { height: 100%; width: 0%; background: var(--clay); transition: width 0.3s ease; }
 
-        /* success */
-        .success {
-            display: none; margin-top: 12px; padding: 22px;
+        /* results bar */
+        .results {
+            display: none; margin-top: 12px; padding: 16px 18px;
             border: 1px solid var(--line); border-left: 3px solid var(--ok);
             border-radius: 10px; background: var(--paper-2);
         }
-        .success .s-title {
-            font-family: 'Fraunces', Georgia, serif;
-            font-size: 1.2rem; font-weight: 600; color: var(--ok);
+        .results .r-title {
+            font-family: 'Fraunces', Georgia, serif; font-size: 1.12rem; font-weight: 600; color: var(--ok);
             display: flex; align-items: center; gap: 9px;
         }
-        .success .s-title svg { width: 18px; height: 18px; }
-        .success .s-sub { font-size: 0.83rem; color: var(--ink-soft); margin: 6px 0 16px; }
-        .success .actions { display: flex; gap: 10px; }
-        .success .actions button {
+        .results .r-title svg { width: 18px; height: 18px; }
+        .results .r-sub { font-size: 0.82rem; color: var(--ink-soft); margin: 6px 0 16px; }
+        .results .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+        .results .actions button {
             padding: 10px 16px; border-radius: 8px; font-family: inherit;
-            font-size: 0.82rem; font-weight: 600; cursor: pointer; transition: background 0.2s;
+            font-size: 0.82rem; font-weight: 600; cursor: pointer; transition: background 0.2s; display: inline-flex; align-items: center; gap: 7px;
         }
-        .btn-dl { border: none; background: var(--sage); color: var(--paper); }
-        .btn-dl:hover { background: var(--sage-dk); }
-        .btn-again { border: 1px solid var(--line); background: transparent; color: var(--ink); }
-        .btn-again:hover { background: var(--paper-3); }
+        .results .actions button svg { width: 14px; height: 14px; }
+        .btn-zip { border: none; background: var(--sage); color: var(--paper); }
+        .btn-zip:hover { background: var(--sage-dk); }
+        .btn-more { border: 1px solid var(--line); background: transparent; color: var(--ink); }
+        .btn-more:hover { background: var(--paper-3); }
 
         .status { margin-top: 12px; padding: 0 4px; font-size: 0.82rem; min-height: 16px; }
         .status.error { color: var(--clay-dk); }
         .status.info  { color: var(--ink-soft); }
 
-        /* feature strip — adds resourcefulness */
-        .features {
-            margin-top: 28px;
-            display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;
-        }
+        .features { margin-top: 28px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
         .feature { display: flex; flex-direction: column; gap: 7px; }
-        .feature .f-ic {
-            width: 30px; height: 30px; border-radius: 8px;
-            display: grid; place-items: center;
-            background: var(--paper-2); border: 1px solid var(--line);
-            color: var(--sage);
-        }
+        .feature .f-ic { width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; background: var(--paper-2); border: 1px solid var(--line); color: var(--sage); }
         .feature .f-ic svg { width: 16px; height: 16px; }
         .feature h3 { font-size: 0.82rem; font-weight: 600; }
         .feature p { font-size: 0.74rem; color: var(--ink-soft); line-height: 1.45; }
 
         .foot {
-            margin-top: 30px; padding-top: 18px;
-            border-top: 1px solid var(--line);
+            margin-top: 30px; padding-top: 18px; border-top: 1px solid var(--line);
             font-size: 0.73rem; color: var(--ink-soft); line-height: 1.6;
             display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;
         }
@@ -256,7 +215,6 @@
     </style>
 </head>
 <body>
-    <!-- corner fish: personal mark -->
     <svg class="fish" viewBox="0 0 96 56" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="M22 28 C 34 11, 64 11, 78 28 C 64 45, 34 45, 22 28 Z"/>
         <path d="M22 28 L 8 17 L 13 28 L 8 39 Z"/>
@@ -278,12 +236,12 @@
 
         <header>
             <div class="eyebrow">Document Converter</div>
-            <h1>Slides to <em>PDF</em>,<br>simply.</h1>
-            <p class="lede">Drop a PowerPoint file and get a clean, shareable PDF in seconds. No accounts, no clutter, no fuss.</p>
+            <h1>Slides to <em>PDF</em>,<br>in bulk.</h1>
+            <p class="lede">Drop one PowerPoint file or a whole batch. Each becomes a clean PDF — download them individually or all at once as a zip.</p>
         </header>
 
         <div class="panel">
-            <div class="drop-zone" id="dropZone" role="button" tabindex="0" aria-label="Upload a PPTX file">
+            <div class="drop-zone" id="dropZone" role="button" tabindex="0" aria-label="Upload PPTX files">
                 <div class="dz-icon">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -291,33 +249,23 @@
                         <path d="m7 8 5-5 5 5"/>
                     </svg>
                 </div>
-                <div class="dz-title">Drag &amp; drop your .pptx here</div>
-                <div class="dz-sub">PowerPoint files up to 50&nbsp;MB</div>
+                <div class="dz-title">Drag &amp; drop your .pptx files here</div>
+                <div class="dz-sub">One or many — up to 50&nbsp;MB each</div>
                 <button class="browse" id="browseBtn" type="button">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>
                     </svg>
-                    Choose a file
+                    Choose files
                 </button>
             </div>
-            <input type="file" id="fileInput" accept=".pptx">
+            <input type="file" id="fileInput" accept=".pptx" multiple>
 
-            <div class="file-row" id="fileRow">
-                <div class="fr-badge">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                        <path d="M14 2v6h6"/>
-                    </svg>
+            <div class="queue" id="queue">
+                <div class="queue-head">
+                    <span id="queueCount">0 files</span>
+                    <button class="clear" id="clearBtn" type="button">Clear all</button>
                 </div>
-                <div class="fr-meta">
-                    <div class="fr-name" id="frName"></div>
-                    <div class="fr-size" id="frSize"></div>
-                </div>
-                <button class="fr-remove" id="frRemove" type="button" aria-label="Remove file">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M18 6 6 18M6 6l12 12"/>
-                    </svg>
-                </button>
+                <div class="file-list" id="fileList"></div>
             </div>
 
             <button class="btn" id="convertBtn" type="button">
@@ -327,19 +275,22 @@
                 </span>
             </button>
 
-            <div class="progress" id="progress"><span></span></div>
+            <div class="progress" id="progress"><div class="bar" id="progressBar"></div></div>
 
-            <div class="success" id="successPanel">
-                <div class="s-title">
+            <div class="results" id="results">
+                <div class="r-title">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M20 6 9 17l-5-5"/>
                     </svg>
-                    Done
+                    All done
                 </div>
-                <div class="s-sub" id="okSub">Your PDF has been downloaded.</div>
+                <div class="r-sub" id="resultsSub">Your PDFs are ready.</div>
                 <div class="actions">
-                    <button class="btn-dl" id="downloadAgain" type="button">Download again</button>
-                    <button class="btn-again" id="convertAnother" type="button">Convert another</button>
+                    <button class="btn-zip" id="downloadZip" type="button">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-6"/><path d="M12 3v12m0 0 4-4m-4 4-4-4"/></svg>
+                        Download all (.zip)
+                    </button>
+                    <button class="btn-more" id="convertMore" type="button">Convert more</button>
                 </div>
             </div>
 
@@ -348,23 +299,17 @@
 
         <section class="features">
             <div class="feature">
-                <div class="f-ic">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9z"/></svg>
-                </div>
-                <h3>Fast</h3>
-                <p>Converted in seconds, right in your browser.</p>
+                <div class="f-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></div>
+                <h3>Batch</h3>
+                <p>Convert many decks in one go.</p>
             </div>
             <div class="feature">
-                <div class="f-ic">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                </div>
+                <div class="f-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
                 <h3>Private</h3>
                 <p>Files convert and vanish — never stored.</p>
             </div>
             <div class="feature">
-                <div class="f-ic">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-6"/><path d="M12 3v12m0 0 4-4m-4 4-4-4"/></svg>
-                </div>
+                <div class="f-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9z"/></svg></div>
                 <h3>Free</h3>
                 <p>No sign-up, no limits, no catch.</p>
             </div>
@@ -383,41 +328,42 @@
     const dropZone     = document.getElementById('dropZone');
     const fileInput    = document.getElementById('fileInput');
     const browseBtn    = document.getElementById('browseBtn');
-    const fileRow      = document.getElementById('fileRow');
-    const frName       = document.getElementById('frName');
-    const frSize       = document.getElementById('frSize');
-    const frRemove     = document.getElementById('frRemove');
+    const queue        = document.getElementById('queue');
+    const queueCount   = document.getElementById('queueCount');
+    const clearBtn     = document.getElementById('clearBtn');
+    const fileList     = document.getElementById('fileList');
     const convertBtn   = document.getElementById('convertBtn');
     const btnLabel     = document.getElementById('btnLabel');
     const spinner      = document.getElementById('spinner');
     const progress     = document.getElementById('progress');
-    const successPanel = document.getElementById('successPanel');
-    const okSub        = document.getElementById('okSub');
-    const downloadAgain= document.getElementById('downloadAgain');
-    const convertAnother = document.getElementById('convertAnother');
+    const progressBar  = document.getElementById('progressBar');
+    const results      = document.getElementById('results');
+    const resultsSub   = document.getElementById('resultsSub');
+    const downloadZip  = document.getElementById('downloadZip');
+    const convertMore  = document.getElementById('convertMore');
     const statusEl     = document.getElementById('status');
 
-    let selectedFile = null;
-    let lastBlobUrl  = null;
-    let lastPdfName  = null;
+    const MAX_BYTES = 50 * 1024 * 1024;
+    let items = [];          // { id, file, status, blob, pdfName, rowEl, statusEl, dlBtn }
+    let nextId = 1;
+    let converting = false;
 
+    // --- selection ---
     dropZone.addEventListener('click', e => { if (e.target.closest('#browseBtn')) return; fileInput.click(); });
     browseBtn.addEventListener('click', e => { e.stopPropagation(); fileInput.click(); });
-    dropZone.addEventListener('keydown', e => {
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); }
-    });
+    dropZone.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); } });
     dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
     dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
     dropZone.addEventListener('drop', e => {
         e.preventDefault();
         dropZone.classList.remove('drag-over');
-        if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]);
+        addFiles(e.dataTransfer.files);
     });
-    fileInput.addEventListener('change', () => { if (fileInput.files[0]) setFile(fileInput.files[0]); });
+    fileInput.addEventListener('change', () => { addFiles(fileInput.files); fileInput.value = ''; });
 
-    frRemove.addEventListener('click', resetAll);
-    convertAnother.addEventListener('click', resetAll);
-    downloadAgain.addEventListener('click', () => { if (lastBlobUrl) triggerDownload(lastBlobUrl, lastPdfName); });
+    clearBtn.addEventListener('click', clearAll);
+    convertMore.addEventListener('click', () => { results.style.display = 'none'; showStatus(''); });
+    downloadZip.addEventListener('click', downloadAllZip);
 
     function fmtSize(b) {
         if (b < 1024) return b + ' B';
@@ -425,70 +371,186 @@
         return (b / 1048576).toFixed(2) + ' MB';
     }
 
-    function setFile(file) {
-        if (!file.name.toLowerCase().endsWith('.pptx')) { showStatus('Only .pptx files are supported.', 'error'); return; }
-        if (file.size > 50 * 1024 * 1024) { showStatus('File is larger than the 50 MB limit.', 'error'); return; }
-        selectedFile = file;
-        frName.textContent = file.name;
-        frSize.textContent = fmtSize(file.size);
-        fileRow.style.display = 'flex';
-        convertBtn.style.display = 'block';
-        successPanel.style.display = 'none';
-        showStatus('');
+    function addFiles(fileListObj) {
+        const incoming = Array.from(fileListObj);
+        let rejected = 0;
+        for (const file of incoming) {
+            if (!file.name.toLowerCase().endsWith('.pptx')) { rejected++; continue; }
+            if (file.size > MAX_BYTES) { rejected++; continue; }
+            // skip duplicates (same name + size)
+            if (items.some(it => it.file.name === file.name && it.file.size === file.size)) continue;
+            addItem(file);
+        }
+        results.style.display = 'none';
+        if (rejected > 0) showStatus(rejected + ' file(s) skipped — only .pptx under 50 MB are allowed.', 'error');
+        else showStatus('');
+        refreshUI();
     }
 
-    convertBtn.addEventListener('click', async () => {
-        if (!selectedFile) return;
+    function addItem(file) {
+        const id = nextId++;
+        const row = document.createElement('div');
+        row.className = 'file-row';
+        row.innerHTML = `
+            <div class="fr-badge">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>
+                </svg>
+            </div>
+            <div class="fr-meta">
+                <div class="fr-name"></div>
+                <div class="fr-status"></div>
+            </div>
+            <button class="fr-act dl" hidden aria-label="Download PDF" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-6"/><path d="M12 3v12m0 0 4-4m-4 4-4-4"/></svg>
+            </button>
+            <button class="fr-act rm" aria-label="Remove" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </button>`;
+        row.querySelector('.fr-name').textContent = file.name;
+        const statusElRow = row.querySelector('.fr-status');
+        const dlBtn = row.querySelector('.dl');
+        const rmBtn = row.querySelector('.rm');
+
+        const item = { id, file, status: 'pending', blob: null, pdfName: null, rowEl: row, statusEl: statusElRow, dlBtn, rmBtn };
+        items.push(item);
+        setRowStatus(item, 'pending');
+
+        rmBtn.addEventListener('click', () => removeItem(id));
+        dlBtn.addEventListener('click', () => { if (item.blob) downloadBlob(item.blob, item.pdfName); });
+
+        fileList.appendChild(row);
+    }
+
+    function setRowStatus(item, status) {
+        item.status = status;
+        const el = item.statusEl;
+        el.className = 'fr-status';
+        if (status === 'pending')      el.textContent = fmtSize(item.file.size);
+        else if (status === 'converting') { el.classList.add('busy'); el.innerHTML = '<span class="mini-spin"></span> Converting…'; }
+        else if (status === 'done')    { el.classList.add('done'); el.textContent = '✓ Converted'; }
+        else if (status === 'error')   { el.classList.add('error'); el.textContent = '✕ Failed — skipped'; }
+        item.dlBtn.hidden = status !== 'done';
+    }
+
+    function removeItem(id) {
+        const item = items.find(it => it.id === id);
+        if (!item) return;
+        item.rowEl.remove();
+        items = items.filter(it => it.id !== id);
+        refreshUI();
+    }
+
+    function clearAll() {
+        items = [];
+        fileList.innerHTML = '';
+        results.style.display = 'none';
+        progress.style.display = 'none';
+        showStatus('');
+        refreshUI();
+    }
+
+    function refreshUI() {
+        const n = items.length;
+        queue.style.display = n ? 'block' : 'none';
+        queueCount.textContent = n + (n === 1 ? ' file' : ' files');
+        const pending = items.filter(it => it.status === 'pending').length;
+        convertBtn.style.display = pending > 0 ? 'block' : 'none';
+        btnLabel.textContent = pending === 1 ? 'Convert to PDF' : `Convert ${pending} files to PDF`;
+    }
+
+    convertBtn.addEventListener('click', convertAll);
+
+    async function convertAll() {
+        if (converting) return;
+        const pending = items.filter(it => it.status === 'pending');
+        if (!pending.length) return;
+
+        converting = true;
         setLoading(true);
-        showStatus('Converting — the first run may take a moment…', 'info');
+        results.style.display = 'none';
+        progress.style.display = 'block';
+        progressBar.style.width = '0%';
 
-        const form = new FormData();
-        form.append('file', selectedFile);
-
-        try {
-            const res = await fetch('/convert', { method: 'POST', body: form });
-            if (!res.ok) {
-                const data = await res.json().catch(() => ({}));
-                throw new Error(data.error || ('Server error ' + res.status));
+        let done = 0, failed = 0;
+        for (let i = 0; i < pending.length; i++) {
+            const item = pending[i];
+            setRowStatus(item, 'converting');
+            showStatus(`Converting ${i + 1} of ${pending.length}…`, 'info');
+            try {
+                const form = new FormData();
+                form.append('file', item.file);
+                const res = await fetch('/convert', { method: 'POST', body: form });
+                if (!res.ok) {
+                    const data = await res.json().catch(() => ({}));
+                    throw new Error(data.error || ('Server error ' + res.status));
+                }
+                item.blob = await res.blob();
+                item.pdfName = item.file.name.replace(/\.pptx$/i, '.pdf');
+                setRowStatus(item, 'done');
+                done++;
+            } catch (err) {
+                setRowStatus(item, 'error');
+                failed++;
             }
-            const blob = await res.blob();
-            if (lastBlobUrl) URL.revokeObjectURL(lastBlobUrl);
-            lastBlobUrl = URL.createObjectURL(blob);
-            lastPdfName = selectedFile.name.replace(/\.pptx$/i, '.pdf');
-            triggerDownload(lastBlobUrl, lastPdfName);
-
-            fileRow.style.display = 'none';
-            convertBtn.style.display = 'none';
-            okSub.textContent = lastPdfName + ' has been downloaded.';
-            successPanel.style.display = 'block';
-            showStatus('');
-        } catch (err) {
-            showStatus(err.message || 'Conversion failed. Please try again.', 'error');
-        } finally {
-            setLoading(false);
+            progressBar.style.width = Math.round(((i + 1) / pending.length) * 100) + '%';
         }
-    });
 
-    function triggerDownload(url, name) {
+        converting = false;
+        setLoading(false);
+        progress.style.display = 'none';
+        refreshUI();
+
+        const anyDone = items.some(it => it.status === 'done');
+        if (anyDone) {
+            results.style.display = 'block';
+            resultsSub.textContent = `${done} converted` + (failed ? `, ${failed} failed` : '') + '. Download below.';
+            showStatus('');
+        } else {
+            showStatus('No files could be converted. Please try again.', 'error');
+        }
+    }
+
+    function downloadBlob(blob, name) {
+        const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url; a.download = name;
         document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 4000);
+    }
+
+    async function downloadAllZip() {
+        const done = items.filter(it => it.status === 'done' && it.blob);
+        if (!done.length) return;
+        if (done.length === 1) { downloadBlob(done[0].blob, done[0].pdfName); return; }
+
+        downloadZip.disabled = true;
+        const original = downloadZip.innerHTML;
+        downloadZip.innerHTML = 'Zipping…';
+        try {
+            const zip = new JSZip();
+            const used = {};
+            for (const it of done) {
+                let name = it.pdfName;
+                if (used[name]) { const n = ++used[name]; name = name.replace(/\.pdf$/i, ` (${n}).pdf`); }
+                else used[name] = 1;
+                zip.file(name, it.blob);
+            }
+            const blob = await zip.generateAsync({ type: 'blob' });
+            downloadBlob(blob, 'converted-pdfs.zip');
+        } catch (err) {
+            showStatus('Could not build the zip. Try downloading files individually.', 'error');
+        } finally {
+            downloadZip.disabled = false;
+            downloadZip.innerHTML = original;
+        }
     }
 
     function setLoading(loading) {
         convertBtn.disabled = loading;
         spinner.style.display = loading ? 'inline-block' : 'none';
-        btnLabel.textContent = loading ? 'Converting…' : 'Convert to PDF';
-        progress.style.display = loading ? 'block' : 'none';
-    }
-
-    function resetAll() {
-        selectedFile = null;
-        fileInput.value = '';
-        fileRow.style.display = 'none';
-        convertBtn.style.display = 'none';
-        successPanel.style.display = 'none';
-        showStatus('');
+        clearBtn.style.visibility = loading ? 'hidden' : 'visible';
+        items.forEach(it => { it.rmBtn.disabled = loading; });
     }
 
     function showStatus(msg, type = '') {
