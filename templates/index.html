@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PPTX to PDF Converter</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f0f0f5;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 20px;
+            padding: 48px 40px;
+            max-width: 460px;
+            width: 100%;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+            text-align: center;
+        }
+
+        .logo { font-size: 2.4rem; margin-bottom: 12px; }
+        h1 { font-size: 1.5rem; color: #111; font-weight: 700; margin-bottom: 6px; }
+        .subtitle { color: #888; font-size: 0.9rem; margin-bottom: 32px; }
+
+        .drop-zone {
+            border: 2px dashed #d4d4d8;
+            border-radius: 14px;
+            padding: 44px 20px;
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+            user-select: none;
+        }
+        .drop-zone:hover, .drop-zone.drag-over {
+            border-color: #6366f1;
+            background: #f5f3ff;
+        }
+        .drop-zone .dz-icon { font-size: 2.2rem; margin-bottom: 10px; }
+        .drop-zone p { color: #555; font-size: 0.88rem; line-height: 1.6; }
+        .drop-zone p .hl { color: #6366f1; font-weight: 600; }
+
+        #file-input { display: none; }
+
+        .file-chip {
+            display: none;
+            margin-top: 14px;
+            padding: 10px 16px;
+            background: #f5f3ff;
+            border-radius: 10px;
+            font-size: 0.83rem;
+            color: #6366f1;
+            text-align: left;
+            word-break: break-all;
+        }
+
+        .btn {
+            display: none;
+            margin-top: 14px;
+            width: 100%;
+            padding: 14px;
+            background: #6366f1;
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            font-size: 0.97rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, opacity 0.2s;
+        }
+        .btn:hover:not(:disabled) { background: #4f46e5; }
+        .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+        .progress-wrap {
+            display: none;
+            margin-top: 14px;
+            height: 4px;
+            background: #e5e7eb;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .progress-bar {
+            height: 100%;
+            background: #6366f1;
+            width: 35%;
+            border-radius: 4px;
+            animation: slide 1.4s ease-in-out infinite;
+        }
+        @keyframes slide {
+            0%   { transform: translateX(-100%); }
+            100% { transform: translateX(370%); }
+        }
+
+        .status {
+            margin-top: 14px;
+            font-size: 0.84rem;
+            min-height: 18px;
+            color: #888;
+        }
+        .status.error  { color: #dc2626; }
+        .status.success { color: #16a34a; }
+    </style>
+</head>
+<body>
+<div class="card">
+    <div class="logo">📊</div>
+    <h1>PPTX to PDF</h1>
+    <p class="subtitle">Convert PowerPoint files to PDF — free, fast, private</p>
+
+    <div class="drop-zone" id="dropZone">
+        <div class="dz-icon">📁</div>
+        <p>Drop your <span class="hl">.pptx</span> file here<br>or <span class="hl">click to browse</span></p>
+    </div>
+    <input type="file" id="fileInput" accept=".pptx">
+
+    <div class="file-chip" id="fileChip"></div>
+    <div class="progress-wrap" id="progressWrap"><div class="progress-bar"></div></div>
+    <button class="btn" id="convertBtn">Convert to PDF</button>
+    <div class="status" id="status"></div>
+</div>
+
+<script>
+    const dropZone   = document.getElementById('dropZone');
+    const fileInput  = document.getElementById('fileInput');
+    const fileChip   = document.getElementById('fileChip');
+    const convertBtn = document.getElementById('convertBtn');
+    const statusEl   = document.getElementById('status');
+    const progressWrap = document.getElementById('progressWrap');
+    let selectedFile = null;
+
+    dropZone.addEventListener('click', () => fileInput.click());
+
+    dropZone.addEventListener('dragover', e => {
+        e.preventDefault();
+        dropZone.classList.add('drag-over');
+    });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+    dropZone.addEventListener('drop', e => {
+        e.preventDefault();
+        dropZone.classList.remove('drag-over');
+        if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]);
+    });
+
+    fileInput.addEventListener('change', () => {
+        if (fileInput.files[0]) setFile(fileInput.files[0]);
+    });
+
+    function setFile(file) {
+        if (!file.name.toLowerCase().endsWith('.pptx')) {
+            showStatus('Only .pptx files are supported.', 'error');
+            return;
+        }
+        selectedFile = file;
+        const mb = (file.size / 1024 / 1024).toFixed(2);
+        fileChip.textContent = `${file.name}  —  ${mb} MB`;
+        fileChip.style.display = 'block';
+        convertBtn.style.display = 'block';
+        showStatus('');
+    }
+
+    convertBtn.addEventListener('click', async () => {
+        if (!selectedFile) return;
+        convertBtn.disabled = true;
+        progressWrap.style.display = 'block';
+        showStatus('Converting, please wait…');
+
+        const form = new FormData();
+        form.append('file', selectedFile);
+
+        try {
+            const res = await fetch('/convert', { method: 'POST', body: form });
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                throw new Error(data.error || `Server error ${res.status}`);
+            }
+            const blob = await res.blob();
+            const url  = URL.createObjectURL(blob);
+            const a    = document.createElement('a');
+            a.href     = url;
+            a.download = selectedFile.name.replace(/\.pptx$/i, '.pdf');
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+            showStatus('Done! PDF downloaded.', 'success');
+        } catch (err) {
+            showStatus(err.message, 'error');
+        } finally {
+            convertBtn.disabled = false;
+            progressWrap.style.display = 'none';
+        }
+    });
+
+    function showStatus(msg, type = '') {
+        statusEl.textContent = msg;
+        statusEl.className   = 'status' + (type ? ' ' + type : '');
+    }
+</script>
+</body>
+</html>
