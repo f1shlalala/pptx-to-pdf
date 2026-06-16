@@ -90,10 +90,6 @@
         @keyframes rowIn      { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes resultsPop { from { opacity: 0; transform: translateY(10px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
         @keyframes sheen      { from { transform: translateX(-160%); } to { transform: translateX(260%); } }
-        @keyframes swimBob {
-            0%, 100% { transform: translate(-50%, -50%) scaleX(-1) translateY(0) rotate(0deg); }
-            50%      { transform: translate(-50%, -50%) scaleX(-1) translateY(-3px) rotate(-4deg); }
-        }
         @media (prefers-reduced-motion: no-preference) {
             body::after { animation: breathe 34s ease-in-out infinite alternate; }
             .fish { transform-origin: 55% 60%; animation: fishBob 7s ease-in-out infinite; }
@@ -119,7 +115,6 @@
             .file-row { animation: rowIn 0.35s ease both; }
             .results { animation: resultsPop 0.45s cubic-bezier(0.2,0.7,0.2,1) both; }
             .btn:hover:not(:disabled)::after { animation: sheen 0.85s ease; }
-            .progress .swimmer { animation: swimBob 1.2s ease-in-out infinite; }
         }
 
         .wrap { position: relative; z-index: 2; width: 100%; max-width: 480px; }
@@ -251,12 +246,10 @@
         .options .opt input { accent-color: var(--clay); width: 15px; height: 15px; cursor: pointer; flex-shrink: 0; margin: 0; }
         .options .opt em { font-style: normal; color: var(--ink-soft); font-size: 0.72rem; }
 
-        .progress { display: none; position: relative; margin-top: 20px; height: 3px; background: var(--line); overflow: visible; border-radius: 3px; }
-        .progress .bar { height: 100%; width: 0%; background: var(--clay); border-radius: 3px; transition: width 0.3s ease; }
-        .progress .swimmer {
-            position: absolute; top: 50%; left: 0; width: 26px; height: auto; color: var(--clay);
-            transform: translate(-50%, -50%) scaleX(-1); transition: left 0.3s ease; pointer-events: none;
-        }
+        .progress { display: none; margin-top: 16px; }
+        .wave-loader { width: 100%; height: auto; overflow: visible; display: block; }
+        .wave-trail { stroke-dasharray: 100; stroke-dashoffset: 100; }
+        .swimmer { color: var(--clay); }
 
         /* results bar */
         .results {
@@ -379,11 +372,13 @@
             </button>
 
             <div class="progress" id="progress">
-                <div class="bar" id="progressBar"></div>
-                <svg class="swimmer" id="swimmer" viewBox="0 0 96 56" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M22 28 C 34 11, 64 11, 78 28 C 64 45, 34 45, 22 28 Z"/>
-                    <path d="M22 28 L 8 17 L 13 28 L 8 39 Z"/>
-                    <circle cx="66" cy="24" r="2.6" fill="currentColor" stroke="none"/>
+                <svg id="waveLoader" class="wave-loader" viewBox="0 0 480 52" preserveAspectRatio="xMidYMid meet" fill="none" aria-hidden="true">
+                    <path id="wave" class="wave-trail" stroke="var(--clay)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" pathLength="100"/>
+                    <g id="swimmer" class="swimmer" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none">
+                        <path d="M22 28 C 34 11, 64 11, 78 28 C 64 45, 34 45, 22 28 Z"/>
+                        <path d="M22 28 L 8 17 L 13 28 L 8 39 Z"/>
+                        <circle cx="66" cy="24" r="2.6" fill="currentColor" stroke="none"/>
+                    </g>
                 </svg>
             </div>
 
@@ -446,7 +441,7 @@
     const btnLabel     = document.getElementById('btnLabel');
     const spinner      = document.getElementById('spinner');
     const progress     = document.getElementById('progress');
-    const progressBar  = document.getElementById('progressBar');
+    const wave         = document.getElementById('wave');
     const results      = document.getElementById('results');
     const resultsSub   = document.getElementById('resultsSub');
     const downloadZip  = document.getElementById('downloadZip');
@@ -466,6 +461,62 @@
     let items = [];          // { id, file, status, blob, pdfName, rowEl, statusEl, dlBtn }
     let nextId = 1;
     let converting = false;
+
+    // --- wave loader (fish trailing a wavy line) ---
+    const FISH_SCALE = 0.34;
+    const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let waveLen = 0, targetPct = 0, dispPct = 0, rafId = null;
+
+    // Build the wavy line at a given traveling phase, so the whole line undulates.
+    function buildWaveAt(phase) {
+        const x0 = 24, x1 = 432, base = 26, amp = 7, wl = 82;
+        let d = '';
+        for (let x = x0; x <= x1; x += 3) {
+            const y = base - amp * Math.sin((x - x0) / wl * 2 * Math.PI + phase);
+            d += (d === '' ? 'M ' : ' L ') + x.toFixed(1) + ' ' + y.toFixed(2);
+        }
+        wave.setAttribute('d', d);
+        waveLen = wave.getTotalLength();
+    }
+
+    const clampPct = v => Math.max(0, Math.min(100, v));
+    function setTrail(pct) { wave.style.strokeDashoffset = (100 - clampPct(pct)); }
+
+    // Place the fish with its tail pinned to the trail tip, rotated to the wave's tangent.
+    function placeFish(pos) {
+        pos = clampPct(pos);
+        const len = waveLen * pos / 100;
+        const p = wave.getPointAtLength(len);
+        const p2 = wave.getPointAtLength(Math.min(waveLen, len + 2));
+        const ang = Math.atan2(p2.y - p.y, p2.x - p.x) * 180 / Math.PI;
+        swimmer.setAttribute('transform',
+            'translate(' + p.x.toFixed(2) + ' ' + p.y.toFixed(2) + ') rotate(' + ang.toFixed(2) + ') scale(' + FISH_SCALE + ') translate(-8 -28)');
+    }
+
+    function animate(t) {
+        dispPct += (targetPct - dispPct) * 0.06;        // slow glide toward real progress
+        buildWaveAt(t / 200);                           // living, traveling wiggle on the whole line
+        const sway = Math.sin(t / 650) * 2;             // gentle continuous forward swim, never freezes
+        const pos = dispPct + sway;
+        setTrail(pos);
+        placeFish(pos);
+        rafId = requestAnimationFrame(animate);
+    }
+
+    function startLoader() {
+        targetPct = 0; dispPct = 0;
+        buildWaveAt(0); setTrail(0); placeFish(0);
+        if (!REDUCED) rafId = requestAnimationFrame(animate);
+    }
+
+    function setProgress(pct) {
+        targetPct = pct;
+        if (REDUCED) { buildWaveAt(0); setTrail(pct); placeFish(pct); }
+    }
+
+    function stopLoader() {
+        if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+    }
 
     // --- selection ---
     dropZone.addEventListener('click', e => { if (e.target.closest('#browseBtn')) return; fileInput.click(); });
@@ -564,6 +615,7 @@
         items = [];
         fileList.innerHTML = '';
         results.style.display = 'none';
+        stopLoader();
         progress.style.display = 'none';
         showStatus('');
         refreshUI();
@@ -614,8 +666,7 @@
         setLoading(true);
         results.style.display = 'none';
         progress.style.display = 'block';
-        progressBar.style.width = '0%';
-        swimmer.style.left = '0%';
+        startLoader();
 
         let done = 0, failed = 0;
         for (let i = 0; i < pending.length; i++) {
@@ -641,12 +692,12 @@
                 failed++;
             }
             const pct = Math.round(((i + 1) / pending.length) * 100);
-            progressBar.style.width = pct + '%';
-            swimmer.style.left = pct + '%';
+            setProgress(pct);
         }
 
         converting = false;
         setLoading(false);
+        stopLoader();
         progress.style.display = 'none';
         refreshUI();
 
