@@ -254,11 +254,11 @@
         /* results bar */
         .results {
             display: none; margin-top: 12px; padding: 16px 18px;
-            border: 1px solid var(--line); border-left: 3px solid var(--ok);
+            border: 1px solid var(--line); border-left: 3px solid var(--clay);
             border-radius: 10px; background: var(--paper-2);
         }
         .results .r-title {
-            font-family: 'Fraunces', Georgia, serif; font-size: 1.12rem; font-weight: 600; color: var(--ok);
+            font-family: 'Fraunces', Georgia, serif; font-size: 1.12rem; font-weight: 600; color: var(--clay);
             display: flex; align-items: center; gap: 9px;
         }
         .results .r-title svg { width: 18px; height: 18px; }
@@ -269,8 +269,8 @@
             font-size: 0.82rem; font-weight: 600; cursor: pointer; transition: background 0.2s; display: inline-flex; align-items: center; gap: 7px;
         }
         .results .actions button svg { width: 14px; height: 14px; }
-        .btn-zip { border: none; background: var(--sage); color: var(--paper); }
-        .btn-zip:hover { background: var(--sage-dk); }
+        .btn-zip { border: none; background: var(--clay); color: var(--paper); }
+        .btn-zip:hover { background: var(--clay-dk); }
         .btn-more { border: 1px solid var(--line); background: transparent; color: var(--ink); }
         .btn-more:hover { background: var(--paper-3); }
 
@@ -668,11 +668,12 @@
         progress.style.display = 'block';
         startLoader();
 
-        let done = 0, failed = 0;
-        for (let i = 0; i < pending.length; i++) {
-            const item = pending[i];
+        const total = pending.length;
+        let done = 0, failed = 0, completed = 0;
+        showStatus(`Converting ${total} file${total === 1 ? '' : 's'}…`, 'info');
+
+        async function convertOne(item) {
             setRowStatus(item, 'converting');
-            showStatus(`Converting ${i + 1} of ${pending.length}…`, 'info');
             try {
                 const form = new FormData();
                 form.append('file', item.file);
@@ -691,9 +692,15 @@
                 setRowStatus(item, 'error');
                 failed++;
             }
-            const pct = Math.round(((i + 1) / pending.length) * 100);
-            setProgress(pct);
+            completed++;
+            setProgress(Math.round((completed / total) * 100));
+            if (completed < total) showStatus(`${completed} of ${total} done…`, 'info');
         }
+
+        // Convert with a small concurrency pool so uploads overlap conversion.
+        let next = 0;
+        const worker = async () => { while (next < pending.length) await convertOne(pending[next++]); };
+        await Promise.all(Array.from({ length: Math.min(2, total) }, worker));
 
         converting = false;
         setLoading(false);

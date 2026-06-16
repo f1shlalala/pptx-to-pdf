@@ -51,9 +51,40 @@ def postprocess_pdf(src: Path, dst: Path, grayscale: bool, compress: bool) -> bo
     return True
 
 
+def convert_to_pdf(input_path: Path, pdf_path: Path, tmpdir: Path) -> tuple[bool, str]:
+    """Convert to PDF via the warm unoserver; fall back to a cold LibreOffice spawn."""
+    # Fast path: reuse the already-running LibreOffice via unoserver.
+    try:
+        r = subprocess.run(
+            ["unoconvert", "--convert-to", "pdf", str(input_path), str(pdf_path)],
+            capture_output=True, text=True, timeout=120,
+        )
+        if r.returncode == 0 and pdf_path.exists():
+            return True, ""
+        app.logger.warning("unoconvert miss (rc=%s): %s", r.returncode, r.stderr)
+    except Exception as exc:  # noqa: BLE001
+        app.logger.warning("unoconvert unavailable: %s", exc)
+
+    # Fallback: cold LibreOffice (writes {stem}.pdf into tmpdir).
+    r = subprocess.run(
+        ["libreoffice", "--headless", "--convert-to", "pdf", "--outdir", str(tmpdir), str(input_path)],
+        capture_output=True, text=True, timeout=120,
+    )
+    if r.returncode != 0:
+        return False, r.stderr
+    if not pdf_path.exists():
+        return False, "PDF not generated"
+    return True, ""
+
+
 @app.route("/")
 def index():
     return render_template("index.html")
+
+
+@app.route("/health")
+def health():
+    return "ok", 200
 
 
 @app.route("/convert", methods=["POST"])
@@ -74,26 +105,11 @@ def convert():
     with tempfile.TemporaryDirectory() as tmpdir:
         input_path = Path(tmpdir) / f"{stem}{ext}"
         file.save(input_path)
-
-        result = subprocess.run(
-            [
-                "libreoffice",
-                "--headless",
-                "--convert-to", "pdf",
-                "--outdir", tmpdir,
-                str(input_path),
-            ],
-            capture_output=True,
-            text=True,
-            timeout=120,
-        )
-
-        if result.returncode != 0:
-            return jsonify({"error": "Conversion failed", "detail": result.stderr}), 500
-
         pdf_path = Path(tmpdir) / f"{stem}.pdf"
-        if not pdf_path.exists():
-            return jsonify({"error": "PDF not generated"}), 500
+
+        ok, detail = convert_to_pdf(input_path, pdf_path, Path(tmpdir))
+        if not ok:
+            return jsonify({"error": "Conversion failed", "detail": detail}), 500
 
         if grayscale or compress:
             gs_path = Path(tmpdir) / f"{stem}_gs.pdf"
