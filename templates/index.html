@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>PPTX to PDF</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -32,10 +32,12 @@
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             color: var(--ink);
             min-height: 100vh;
+            min-height: 100dvh;
             display: flex;
-            align-items: center;
+            align-items: safe center;
             justify-content: center;
-            padding: 36px 28px;
+            padding: max(36px, env(safe-area-inset-top)) max(28px, env(safe-area-inset-right))
+                     max(36px, env(safe-area-inset-bottom)) max(28px, env(safe-area-inset-left));
             position: relative;
             background-color: var(--paper);
             background-image:
@@ -50,7 +52,7 @@
         }
 
         .fish {
-            position: fixed; top: 26px; right: 30px;
+            position: fixed; top: max(26px, env(safe-area-inset-top)); right: max(30px, env(safe-area-inset-right));
             width: 78px; height: auto; color: var(--clay);
             opacity: 0.55; z-index: 1;
         }
