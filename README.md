@@ -158,6 +158,4 @@ pick the **Docker** runtime and the **Free** plan, and create it. The
 
 ## License
 
-No license has been specified yet. Until one is added, the code is "all rights
-reserved" by default — add a `LICENSE` file (e.g. MIT) if you want to let others
-reuse it.
+No license has been specified yet.
